@@ -1,10 +1,34 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
+from flask import Flask
+from threading import Thread
+import os
 
+# ==========================
+# Bot Configuration
+# ==========================
 BOT_TOKEN = "7620770717:AAFaayATFoyIyuv6VDfmN41kMj5qj-v67B4"
 FORM_LINK = "https://forms.gle/UDTpWGA49exBcZyMA"
 
-# Main Menu Function
+# ==========================
+# Keep Alive Web Server
+# ==========================
+app_web = Flask(__name__)
+
+@app_web.route('/')
+def home():
+    return "✅ Mezmur Lyrics Bot is running!"
+
+def run():
+    app_web.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# ==========================
+# Bot Functions
+# ==========================
 async def send_main_menu(update, context):
     keyboard = [
         [InlineKeyboardButton("📝 Submit Lyrics/ግጥምታት ንምልኣኽ", url=FORM_LINK)],
@@ -16,7 +40,7 @@ async def send_main_menu(update, context):
 
     message_text = (
         "👋 *እንቋዕ ብደሓን መጻእኩም!*\n\n"
-        "🎵 *ማዕከን ዲጂታል ጝጥምታት መዝሙር *\n\n"
+        "🎵 *ማዕከን ዲጂታል ጝጥምታት መዝሙር*\n\n"
         "ንመራሕቲ ኣምልኾን ኣባላት መዘምራንን፣ ናይ ኤርትራን ኢትዮጵያን መዝሙራት ንምእካብ ዝተሰርዐ ዲጂታላዊ መድረኽ እዩ።\n\n"
         "✨ *1ይ መድረኽ - ምእካብ ግጥምታት:*\n"
         "_ቁልፍታት ብምጥዋቅ ንምስታፍ ወይ ንምፍላጥ ሓበሬታ ይክኣል_"
@@ -31,11 +55,9 @@ async def send_main_menu(update, context):
             message_text, reply_markup=reply_markup, parse_mode='Markdown'
         )
 
-# /start command
 async def start(update: Update, context: CallbackContext):
     await send_main_menu(update, context)
 
-# Button Handler
 async def button_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
@@ -105,13 +127,16 @@ async def button_handler(update: Update, context: CallbackContext):
     elif query.data == "main":
         await send_main_menu(update, context)
 
-# Main Bot Setup
+# ==========================
+# Main Bot Entry Point
+# ==========================
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
+    keep_alive()  # Start Flask web server
+    bot_app = Application.builder().token(BOT_TOKEN).build()
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(CallbackQueryHandler(button_handler))
     print("✅ Mezmur Lyrics Bot is running. Waiting for commands...")
-    app.run_polling()
+    bot_app.run_polling()
 
 if __name__ == '__main__':
     main()
